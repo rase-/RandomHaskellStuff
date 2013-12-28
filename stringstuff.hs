@@ -1,8 +1,20 @@
+module StringStuff
+( recEdit
+, mRecEdit
+, lazyEdit
+, stEdit
+) where
+
 import Data.Array
 import Control.Monad
 import Control.Monad.ST
 import Data.Array.ST
 import Data.Function.Memoize
+
+matchMismatch :: Array Int Char -> Array Int Char -> Int -> Int -> Int
+matchMismatch xs ys i j
+  | xs ! i == ys ! j = 0
+  | otherwise = 1
 
 recEdit :: String -> String -> Int
 recEdit xs ys = dist m n
@@ -11,8 +23,7 @@ recEdit xs ys = dist m n
         ays = array (1,n) $ zip [1..] ys
         dist i j
           | min i j == 0 = max i j
-          | otherwise = minimum [1 + dist (i - 1) j, 1 + dist i (j - 1), dist (i - 1) (j - 1) + matchMismatch i j]
-        matchMismatch i j = if axs ! i == ays ! j then 0 else 1
+          | otherwise = minimum [1 + dist (i - 1) j, 1 + dist i (j - 1), dist (i - 1) (j - 1) + matchMismatch axs ays i j]
 
 mRecEdit :: String -> String -> Int
 mRecEdit xs ys = mdist m n
@@ -22,10 +33,9 @@ mRecEdit xs ys = mdist m n
         dist :: (Int -> Int -> Int) -> Int -> Int -> Int
         dist f i j
           | min i j == 0 = max i j
-          | otherwise = minimum [1 + f (i - 1) j, 1 + f i (j - 1), f (i - 1) (j - 1) + matchMismatch i j]
+          | otherwise = minimum [1 + f (i - 1) j, 1 + f i (j - 1), f (i - 1) (j - 1) + matchMismatch axs ays i j]
         mdist :: Int -> Int -> Int
         mdist = memoFix dist
-        matchMismatch i j = if axs ! i == ays ! j then 0 else 1
 
 
 lazyEdit :: String -> String -> Int
@@ -36,8 +46,7 @@ lazyEdit xs ys = mat ! (m,n)
         ays = array (1,n) $ zip [1..] ys
         dist 0 j = j
         dist i 0 = i
-        dist i j = minimum [mat ! (i - 1, j) + 1, mat ! (i, j - 1) + 1, mat ! (i - 1, j - 1) + (matchMismatch i j)]
-        matchMismatch i j = if axs ! i == ays ! j then 0 else 1
+        dist i j = minimum [mat ! (i - 1, j) + 1, mat ! (i, j - 1) + 1, mat ! (i - 1, j - 1) + (matchMismatch axs ays i j)]
 
 stEdit :: String -> String -> Int
 stEdit xs ys = runST $ do mat <- newArray ((0,0),(m,n)) 0 :: ST s (STArray s (Int,Int) Int)
@@ -47,8 +56,7 @@ stEdit xs ys = runST $ do mat <- newArray ((0,0),(m,n)) 0 :: ST s (STArray s (In
                             do a <- readArray mat (i - 1, j)
                                b <- readArray mat (i, j - 1)
                                c <- readArray mat (i - 1, j - 1)
-                               let matchMismatch = if axs ! i == ays ! j then 0 else 1
-                               let val = minimum [1 + a, 1 + b, matchMismatch + c]
+                               let val = minimum [1 + a, 1 + b, c + matchMismatch axs ays i j]
                                writeArray mat p val
                                return val)
                           x <- readArray mat (m,n)
