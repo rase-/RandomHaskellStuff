@@ -2,6 +2,7 @@ import Data.Array
 import Control.Monad
 import Control.Monad.ST
 import Data.Array.ST
+import Data.Function.Memoize
 
 recEdit :: String -> String -> Int
 recEdit xs ys = dist m n
@@ -10,7 +11,22 @@ recEdit xs ys = dist m n
         ays = array (1,n) $ zip [1..] ys
         dist i j
           | min i j == 0 = max i j
-          | otherwise = minimum [1 + dist (i - 1) j, 1 + dist i (j - 1), if axs ! i == ays ! j then dist (i - 1) (j - 1) else 1 + dist (i - 1) (j - 1)]
+          | otherwise = minimum [1 + dist (i - 1) j, 1 + dist i (j - 1), dist (i - 1) (j - 1) + matchMismatch i j]
+        matchMismatch i j = if axs ! i == ays ! j then 0 else 1
+
+mRecEdit :: String -> String -> Int
+mRecEdit xs ys = mdist m n
+  where (m,n) = (length xs, length ys)
+        axs = array (1,m) $ zip [1..] xs
+        ays = array (1,n) $ zip [1..] ys
+        dist :: (Int -> Int -> Int) -> Int -> Int -> Int
+        dist f i j
+          | min i j == 0 = max i j
+          | otherwise = minimum [1 + f (i - 1) j, 1 + f i (j - 1), f (i - 1) (j - 1) + matchMismatch i j]
+        mdist :: Int -> Int -> Int
+        mdist = memoFix dist
+        matchMismatch i j = if axs ! i == ays ! j then 0 else 1
+
 
 lazyEdit :: String -> String -> Int
 lazyEdit xs ys = mat ! (m,n)
